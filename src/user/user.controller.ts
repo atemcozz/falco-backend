@@ -21,13 +21,15 @@ export class UserController {
   }
 
   @Get('subscriptions/:id')
-  getUserSubscriptions(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.getUserSubscriptions(id);
+  @UseInterceptors(UserInterceptor)
+  getUserSubscriptions(@Param('id', ParseIntPipe) id: number, @Req() req?: UserJwtRequest) {
+    return this.userService.getUserSubscriptions(id ,req?.user?.id);
   }
 
   @Get('subscribers/:id')
-  getUserSubscribers(@Param('id', ParseIntPipe) id: number) {
-    return this.userService.getUserSubscribers(id);
+  @UseInterceptors(UserInterceptor)
+  getUserSubscribers(@Param('id', ParseIntPipe) id: number, @Req() req?: UserJwtRequest) {
+    return this.userService.getUserSubscribers(id, req?.user?.id);
   }
 
   @Put('profile/:id')

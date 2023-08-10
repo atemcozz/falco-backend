@@ -14,7 +14,6 @@ import { LoginDto } from './dto/login.dto';
 import { LogoutDto } from './dto/logout.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ConfigService } from '@nestjs/config';
-import * as passwordGenerator from 'generate-password';
 import { MailerService } from '@nestjs-modules/mailer/dist/mailer.service';
 import * as userQueryHelpers from "../user/helpers/user-query-helpers"
 import {v4 as uuidv4} from "uuid";

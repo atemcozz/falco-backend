@@ -16,4 +16,3 @@ async function bootstrap() {
   console.log(`Running on port ${PORT}`);
 }
 bootstrap();
-console.log(process.env)

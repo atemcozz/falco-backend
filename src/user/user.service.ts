@@ -21,34 +21,54 @@ export class UserService {
     if (!id) {
       throw new BadRequestException({ message: 'Необходим ID пользователся' });
     }
-    const user = await this.knex('v_person AS person')
+    const query =  this.knex('v_person AS person')
         .select("person.*")
         .where({"person.id": id })
         .first();
+    if(sender_id){
+      query.select(this.knex.raw("EXISTS(SELECT FROM person_subscription where subject_id = ? AND object_id = ?) AS subscribed", [sender_id, id]));
+    }
+    const user = await query;
     if (!user) {
       throw new NotFoundException({ message: 'Пользователь не найден' });
     }
     return user;
   }
-  async getUserSubscriptions(user_id: number) {
+  async getUserSubscriptions(user_id: number, sender_id?: number) {
     const user = await this.knex('person').where({ id: user_id }).first();
     if (!user) {
       throw new NotFoundException({ message: 'Пользователь не найден' });
     }
-    const subscriptions = await this.knex('person_subscription').where({
+    const query =  this.knex('person_subscription AS sub')
+        .select("person.id", "person.nickname", "person.avatar_url")
+        .where({
       subject_id: user_id,
-    });
+    })
+        .leftJoin("person", "person.id", "sub.object_id");
+    if(sender_id){
+      query.select(this.knex.raw("EXISTS(SELECT FROM person_subscription where subject_id = ? AND object_id = sub.object_id) AS subscribed", [sender_id]))
+    }
+    const subscriptions = await query;
+
     return subscriptions;
   }
 
-  async getUserSubscribers(user_id: number) {
+  async getUserSubscribers(user_id: number, sender_id?:number) {
     const user = await this.knex('person').where({ id: user_id }).first();
     if (!user) {
       throw new NotFoundException({ message: 'Пользователь не найден' });
     }
-    const subscribers = await this.knex('person_subscription').where({
-      object_id: user_id,
-    });
+    const query =  this.knex('person_subscription AS sub')
+        .select("person.id", "person.nickname", "person.avatar_url")
+        .where({
+          object_id: user_id,
+        })
+        .leftJoin("person", "person.id", "sub.subject_id");
+    if(sender_id){
+      query.select(this.knex.raw("EXISTS(SELECT FROM person_subscription where subject_id = ? AND object_id = sub.subject_id) AS subscribed", [sender_id]))
+    }
+    const subscribers = await query;
+
     return subscribers;
   }
 

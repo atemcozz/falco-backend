@@ -157,7 +157,7 @@ GROUP BY comment.id, person.id;
 
 CREATE OR REPLACE VIEW v_person AS
 SELECT
-	person.id,
+  person.id,
   person.name,
   person.surname,
   person.nickname,
@@ -165,9 +165,16 @@ SELECT
   person.sex,
   person.country,
   person.about,
-  COUNT(DISTINCT post.id) AS posts_count
-FROM person
-LEFT JOIN post ON post.user_id = person.id
-GROUP BY person.id;
+  count(DISTINCT post.id) AS posts_count,
+  count(DISTINCT subscriptions.id) AS subscriptions_count,
+  count(DISTINCT subscribers.id) AS subscribers_count
+
+FROM
+  person
+  LEFT JOIN post ON post.user_id = person.id
+  LEFT JOIN person_subscription AS subscriptions ON subscriptions.subject_id = person.id
+  LEFT JOIN person_subscription AS subscribers ON subscribers.object_id = person.id
+GROUP BY
+  person.id;
 
 -- END VIEWS
