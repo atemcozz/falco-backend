@@ -27,7 +27,18 @@ export class PostService {
         const post_set: PostSet = {pages_count, contents: posts};
         return post_set;
     }
-
+    async getFeedPosts(options: { page?: number, timestamp?: string } = {}, user_id: number ){
+        const {page, timestamp} = options;
+        const userExists = await this.knex("person").where({id: user_id}).first();
+        if(!userExists) throw new NotFoundException();
+        const posts = await this.getPostsQuery({user_id, page, timestamp})
+            .leftJoin("person_subscription", "person_subscription.object_id", "post.user_id")
+            .where({"person_subscription.subject_id": user_id});
+        const posts_count = posts[0]?.posts_count || 0;
+        const pages_count = Math.ceil(posts_count / POSTS_ON_PAGE);
+        const post_set: PostSet = {pages_count, contents: posts};
+        return post_set;
+    }
     async createPost(dto: CreatePostDto, user_id: number): Promise<Post> {
         const {title, content, tags, preview} = dto;
         const post_id: number =

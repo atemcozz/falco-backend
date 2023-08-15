@@ -36,6 +36,14 @@ export class PostController {
            @Query("t") timestamp?: string){
     return this.postService.getPosts({ sort, tags, user_id: req.user?.id, page, timestamp });
   }
+  @Get('feed')
+  @UseGuards(JwtAuthGuard)
+  getFeedPosts(@Req() req: UserJwtRequest,
+               @Query("page", new DefaultValuePipe(1), ParseIntPipe) page?: number,
+               @Query("t") timestamp?: string){
+    return this.postService.getFeedPosts({page, timestamp}, req?.user?.id);
+  }
+
 
   @Get('saved')
   @UseGuards(JwtAuthGuard)
