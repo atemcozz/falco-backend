@@ -1,4 +1,4 @@
-import {Controller, Delete, Get, ParseUUIDPipe, Put, Query, UseGuards} from '@nestjs/common';
+import {Controller, DefaultValuePipe, Delete, Get, ParseUUIDPipe, Put, Query, UseGuards} from '@nestjs/common';
 import { UseInterceptors } from '@nestjs/common/decorators/core/use-interceptors.decorator';
 import { Body, Param, Req } from '@nestjs/common/decorators/http/route-params.decorator';
 import { ForbiddenException } from '@nestjs/common/exceptions';
@@ -10,10 +10,11 @@ import { UserInterceptor } from './user.interceptor';
 import { UserService } from './user.service';
 import {UpdatePasswordDto} from "./dto/update-password-dto";
 import {RequestEmailUpdateDto} from "./dto/request-email-update-dto";
+import {NotificationService} from "./notification.service";
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService, private readonly  notificationService: NotificationService) {}
   @Get("id/:id")
   @UseInterceptors(UserInterceptor)
   getUserByID(@Param('id', ParseIntPipe) id, @Req() req?: UserJwtRequest) {
@@ -71,5 +72,17 @@ export class UserController {
   @Get('/ban/:id')
   getUserBanState(@Param("id", ParseUUIDPipe) id: number) {
     return this.userService.getUserBanState(id);
+  }
+  @Get('/notifications_count')
+  @UseGuards(JwtAuthGuard)
+  getUnreadNotificationsCount(@Req() req: UserJwtRequest) {
+    return this.notificationService.getUnreadNotificationsCount(req?.user?.id);
+  }
+  @Get('/notifications')
+  @UseGuards(JwtAuthGuard)
+  getUserNotifications(@Req() req: UserJwtRequest,
+                       @Query("page", new DefaultValuePipe(1),ParseIntPipe) page?: number,
+                       @Query("t") timestamp?: string) {
+    return this.notificationService.getAllNotifications(req?.user?.id, {page, timestamp});
   }
 }

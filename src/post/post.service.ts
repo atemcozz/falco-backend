@@ -13,10 +13,11 @@ import {CreatePostDto} from './dto/create-post.dto';
 import * as postQueryHelpers from "./helpers/post-query-helpers"
 import QueryBuilder = knex.QueryBuilder;
 import {POSTS_ON_PAGE} from "./const/post-const";
+import {NotificationService} from "../user/notification.service";
 
 @Injectable()
 export class PostService {
-    constructor(@InjectConnection() private readonly knex: Knex) {
+    constructor(@InjectConnection() private readonly knex: Knex, private readonly notificationService: NotificationService) {
     }
 
     async getPosts(options: { sort?: string; tags?: string[]; user_id?: number, page?: number, timestamp?: string } = {}) {
@@ -120,9 +121,12 @@ export class PostService {
                 user_id: sender_id,
                 post_id,
             });
+            await this.notificationService.sendLikeNotification(sender_id, post_id, false);
         } else {
             await this.knex('post_like').insert({user_id: sender_id, post_id});
+            await this.notificationService.sendLikeNotification(sender_id, post_id);
         }
+
     }
 
     async savePost(post_id: number, sender_id: number): Promise<void> {

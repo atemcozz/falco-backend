@@ -13,9 +13,13 @@ import {MailerService} from "@nestjs-modules/mailer/dist";
 import * as path from "path";
 import {UpdatePasswordDto} from "./dto/update-password-dto";
 import * as userQueryHelpers from "./helpers/user-query-helpers";
+import {NotificationService} from "./notification.service";
 @Injectable()
 export class UserService {
-  constructor(@InjectConnection() private readonly knex: Knex, private readonly authService: AuthService, private readonly mailerService: MailerService) {}
+  constructor(@InjectConnection() private readonly knex: Knex,
+              private readonly authService: AuthService,
+              private readonly mailerService: MailerService,
+              private readonly notificationService: NotificationService) {}
 
   async getUserByID(id: number, sender_id?: number) {
     if (!id) {
@@ -140,12 +144,15 @@ export class UserService {
     const subscription = await this.knex('person_subscription').where({ subject_id: subject_id, object_id }).first();
     if (subscription) {
       await this.knex('person_subscription').del().where({ subject_id: subject_id, object_id });
+      await this.notificationService.sendSubscribeNotification(subject_id, object_id, false);
     } else {
       await this.knex('person_subscription').insert({
         subject_id: subject_id,
         object_id,
       });
+      await this.notificationService.sendSubscribeNotification(subject_id, object_id);
     }
+
   }
   async getUserBanState(id: number){
     return this.knex("person_ban")

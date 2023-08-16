@@ -23,7 +23,7 @@ create TABLE IF NOT EXISTS post(
   id SERIAL PRIMARY KEY,
   title VARCHAR(255) NOT NULL,
   preview VARCHAR(255) NOT NULL,
-  content JSON,
+  content JSONB,
   user_id INTEGER NOT NULL,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   community_id INTEGER,
@@ -127,6 +127,21 @@ CREATE TABLE IF NOT EXISTS community_subscription (
   FOREIGN KEY(community_id) REFERENCES community(id)
 );
 
+CREATE TABLE notification (
+    id serial PRIMARY KEY,
+    type character varying (255) NOT NULL,
+    sender_id integer,
+    target_id integer NOT NULL,
+    payload JSONB,
+    read boolean NOT NULL DEFAULT false,
+    created_at timestamp
+    with
+      time zone NOT NULL DEFAULT now(),
+    FOREIGN KEY(sender_id) REFERENCES person(id) ON DELETE CASCADE,
+    FOREIGN KEY(target_id) REFERENCES person(id) ON DELETE CASCADE
+  );
+
+
 --  VIEWS
 CREATE OR REPLACE VIEW v_post AS
 SELECT post.*,
@@ -176,5 +191,22 @@ FROM
   LEFT JOIN person_subscription AS subscribers ON subscribers.object_id = person.id
 GROUP BY
   person.id;
+
+CREATE OR REPLACE VIEW
+  v_notification AS
+SELECT
+  notification.id,
+  notification.type,
+  notification.sender_id,
+  notification.target_id,
+  notification.payload,
+  notification.read,
+  notification.created_at,
+  person.nickname AS sender_nickname,
+  person.avatar_url AS sender_avatar_url
+FROM
+  notification
+  LEFT JOIN person ON person.id = notification.sender_id
+ORDER BY notification.created_at DESC;
 
 -- END VIEWS

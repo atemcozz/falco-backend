@@ -1,0 +1,1 @@
+export const NOTIFICATIONS_ON_PAGE = 10;

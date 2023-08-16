@@ -5,9 +5,10 @@ import {CreateCommentDto} from "./dto/create-comment.dto";
 import {Req} from "@nestjs/common/decorators/http/route-params.decorator";
 import {ForbiddenException, UnauthorizedException} from "@nestjs/common/exceptions";
 import * as userQueryHelpers from "../user/helpers/user-query-helpers";
+import {NotificationService} from "../user/notification.service";
 @Injectable()
 export class CommentService {
-    constructor(@InjectConnection() private readonly knex: Knex){}
+    constructor(@InjectConnection() private readonly knex: Knex, private readonly notificationService: NotificationService){}
     async createComment(dto: CreateCommentDto, post_id: number, user_id: number): Promise<Comment>  {
         const post = await this.knex("post").where({id: post_id}).first();
         if(!post) throw new NotFoundException();
@@ -19,6 +20,10 @@ export class CommentService {
                 body: dto.body,
                 answer_to: dto.answer_to })
             .returning("*");
+        if(dto.answer_to){
+            await this.notificationService.sendReplyNotification(user_id, comment_set[0].id,dto.answer_to);
+        }
+        else await this.notificationService.sendCommentNotification(user_id,  comment_set[0].id, post_id);
 
         return comment_set[0];
     }
