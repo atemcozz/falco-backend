@@ -33,7 +33,7 @@ export class PostController {
            @Query('tags', new DefaultValuePipe([]),ParseArrayPipe) tags?: string[],
            @Query('sort') sort?: string,
            @Query("page", new DefaultValuePipe(1),ParseIntPipe) page?: number,
-           @Query("user_id", new DefaultValuePipe(1),ParseIntPipe) user_id?: number,
+           @Query("user_id", new DefaultValuePipe(0),ParseIntPipe) user_id?: number,
            @Query("search") search?: string,
            @Query("t") timestamp?: string){
     return this.postService.getPosts({ sort, tags, user_id, page, timestamp, search },req.user?.id);

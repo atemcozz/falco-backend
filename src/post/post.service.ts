@@ -182,8 +182,8 @@ export class PostService {
                 `(EXISTS
                         (SELECT el->'content' FROM jsonb_array_elements(post.content) AS el
                         WHERE el->>'type' = 'text'
-                        AND el->>'content' LIKE :search)
-                     OR post.title LIKE :search)`,
+                        AND LOWER(el->>'content') LIKE LOWER(:search))
+                     OR LOWER(post.title) LIKE LOWER(:search))`,
                 {
                     search: `%${search.split(" ").join("%")}%`
                 });
