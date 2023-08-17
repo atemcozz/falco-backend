@@ -5,34 +5,39 @@ import {
     NotFoundException,
     UnauthorizedException,
 } from '@nestjs/common/exceptions';
-import {knex, Knex} from 'knex';
+import { Knex} from 'knex';
 import {InjectConnection} from 'nestjs-knex';
 import {CreatePostDto} from './dto/create-post.dto';
 
 
-import * as postQueryHelpers from "./helpers/post-query-helpers"
-import QueryBuilder = knex.QueryBuilder;
 import {POSTS_ON_PAGE} from "./const/post-const";
 import {NotificationService} from "../user/notification.service";
+import {GetPostsQueries} from "./model/get-posts-queries.interface";
 
 @Injectable()
 export class PostService {
     constructor(@InjectConnection() private readonly knex: Knex, private readonly notificationService: NotificationService) {
     }
 
-    async getPosts(options: GetPostOptions = {}) {
-        const {tags, sort, user_id, page, timestamp, search} = options;
-        const posts = await this.getPostsQuery({tags, sort, user_id, page, timestamp, search});
+    async getPosts(queries: GetPostsQueries = {}, sender_id?: number) {
+        const posts = await this.getPostsQuery(queries, sender_id);
         const posts_count = posts[0]?.posts_count || 0;
         const pages_count = Math.ceil(posts_count / POSTS_ON_PAGE);
         const post_set: PostSet = {pages_count, contents: posts};
         return post_set;
     }
+    async getPostByID(post_id: number, sender_id?: number): Promise<Post> {
+        const post: Post = await this.getPostsQuery({id: post_id}, sender_id).first();
+        if (!post) {
+            throw new NotFoundException();
+        }
+        return post;
+    }
     async getFeedPosts(options: { page?: number, timestamp?: string } = {}, user_id: number ){
         const {page, timestamp} = options;
         const userExists = await this.knex("person").where({id: user_id}).first();
         if(!userExists) throw new NotFoundException();
-        const posts = await this.getPostsQuery({user_id, page, timestamp})
+        const posts = await this.getPostsQuery({page, timestamp}, user_id)
             .leftJoin("person_subscription", "person_subscription.object_id", "post.user_id")
             .where({"person_subscription.subject_id": user_id});
         const posts_count = posts[0]?.posts_count || 0;
@@ -59,40 +64,20 @@ export class PostService {
                     post_id,
                     tag: tag.toLowerCase(),
                 }));
-            console.log(tags);
             await this.knex('post_tag').insert(tagsRows);
         }
-        const new_post: Post = await this.getPostsQuery().where({"post.id": post_id}).first();
-        return new_post;
+        return this.getPostsQuery().where({"post.id": post_id}).first();
     }
 
     async getSavedPosts(user_id: number): Promise<PostSet> {
-        const posts: Post[] = await this.getPostsQuery({user_id})
+        const posts: Post[] = await this.getPostsQuery({}, user_id)
             .leftJoin("bookmark", "bookmark.post_id", "post.id")
             .where("bookmark.user_id", user_id);
         const posts_count = posts[0]?.posts_count || 0;
         const pages_count = Math.ceil(posts_count / POSTS_ON_PAGE);
-        const post_set: PostSet = {pages_count, contents: posts};
-        return post_set;
+        return {pages_count, contents: posts};
     }
 
-    async getPostByID(post_id: number, user_id?: number): Promise<Post> {
-        const post: Post = await this.getPostsQuery({user_id}).where("post.id", post_id).first();
-        if (!post) {
-            throw new NotFoundException();
-        }
-
-        return post;
-    }
-
-    async getPostsByUser(user_id: number, sender_id?: number): Promise<PostSet> {
-        const posts: Post[] = await this.getPostsQuery({user_id}).where("post.user_id", user_id);
-        const posts_count = posts[0]?.posts_count || 0;
-        const pages_count = Math.ceil(posts_count / POSTS_ON_PAGE);
-        const post_set: PostSet = {pages_count, contents: posts};
-        return post_set;
-
-    }
 
     async deletePostByID(post_id: number, sender_id: number): Promise<void> {
         const post = await this.knex('post').select('*').where({id: post_id}).first();
@@ -150,10 +135,14 @@ export class PostService {
         }
     }
 
-    getPostsQuery(options: GetPostOptions = {}): Knex.QueryBuilder<any, Post[]> {
-        const {tags, sort, user_id, page, timestamp, search} = options;
+    getPostsQuery(options: GetPostsQueries = {}, sender_id?: number): Knex.QueryBuilder<any, Post[]> {
+        const {tags, sort, user_id, page, timestamp, search, id} = options;
         const query = this.knex('v_post AS post')
             .select("post.*", this.knex.raw('COUNT(*) OVER() AS posts_count'));
+
+        if(id){
+            query.where("post.id", id);
+        }
         //if tags provided, ensure that intersection count of tags and post tags equals to tags count
         if (tags) {
             query.whereRaw(
@@ -172,11 +161,14 @@ export class PostService {
             query.orderBy('post.created_at', 'DESC');
         }
         //check if user liked/saved post and set bool
-        if (user_id) {
+        if (sender_id) {
             query.select(this.knex.raw(
                 `EXISTS(SELECT * FROM post_like WHERE user_id = :id AND post_id = post.id) AS user_like,
                      EXISTS(SELECT * FROM bookmark WHERE user_id = :id AND post_id = post.id) AS user_saved`,
-                {id: user_id}));
+                {id: sender_id}));
+        }
+        if(user_id){
+            query.where("post.user_id", user_id);
         }
         if (page && page > 0) {
             query.offset(POSTS_ON_PAGE * (page - 1)).limit(POSTS_ON_PAGE);
@@ -200,11 +192,3 @@ export class PostService {
     }
 }
 
-type GetPostOptions = {
-    search?: string,
-    tags?: string[],
-    sort?: string,
-    user_id?: number,
-    page?: number,
-    timestamp?: string,
-};

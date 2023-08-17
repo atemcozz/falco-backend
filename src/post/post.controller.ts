@@ -33,9 +33,10 @@ export class PostController {
            @Query('tags', new DefaultValuePipe([]),ParseArrayPipe) tags?: string[],
            @Query('sort') sort?: string,
            @Query("page", new DefaultValuePipe(1),ParseIntPipe) page?: number,
+           @Query("user_id", new DefaultValuePipe(1),ParseIntPipe) user_id?: number,
            @Query("search") search?: string,
            @Query("t") timestamp?: string){
-    return this.postService.getPosts({ sort, tags, user_id: req.user?.id, page, timestamp, search });
+    return this.postService.getPosts({ sort, tags, user_id, page, timestamp, search },req.user?.id);
   }
   @Get('feed')
   @UseGuards(JwtAuthGuard)
@@ -59,14 +60,6 @@ export class PostController {
     if(!post_id) throw new NotFoundException();
     return this.postService.getPostByID(post_id, req.user?.id);
   }
-
-  @Get('user/:id')
-  @UseInterceptors(UserInterceptor)
-  getPostsByUser(@Param('id', ParseIntPipe) user_id, @Req() req: UserJwtRequest) {
-    if(!user_id || isNaN(user_id)) throw new NotFoundException();
-    return this.postService.getPostsByUser(user_id, req.user?.id);
-  }
-
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   deletePostByID(@Param('id', ParseIntPipe) post_id, @Req() req: UserJwtRequest): Promise<void> {
