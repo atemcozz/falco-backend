@@ -33,8 +33,9 @@ export class PostController {
            @Query('tags', new DefaultValuePipe([]),ParseArrayPipe) tags?: string[],
            @Query('sort') sort?: string,
            @Query("page", new DefaultValuePipe(1),ParseIntPipe) page?: number,
+           @Query("search") search?: string,
            @Query("t") timestamp?: string){
-    return this.postService.getPosts({ sort, tags, user_id: req.user?.id, page, timestamp });
+    return this.postService.getPosts({ sort, tags, user_id: req.user?.id, page, timestamp, search });
   }
   @Get('feed')
   @UseGuards(JwtAuthGuard)

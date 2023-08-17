@@ -20,9 +20,9 @@ export class PostService {
     constructor(@InjectConnection() private readonly knex: Knex, private readonly notificationService: NotificationService) {
     }
 
-    async getPosts(options: { sort?: string; tags?: string[]; user_id?: number, page?: number, timestamp?: string } = {}) {
-        const {tags, sort, user_id, page, timestamp} = options;
-        const posts = await this.getPostsQuery({tags, sort, user_id, page, timestamp});
+    async getPosts(options: GetPostOptions = {}) {
+        const {tags, sort, user_id, page, timestamp, search} = options;
+        const posts = await this.getPostsQuery({tags, sort, user_id, page, timestamp, search});
         const posts_count = posts[0]?.posts_count || 0;
         const pages_count = Math.ceil(posts_count / POSTS_ON_PAGE);
         const post_set: PostSet = {pages_count, contents: posts};
@@ -150,8 +150,8 @@ export class PostService {
         }
     }
 
-    getPostsQuery(options: PostQueryOptions = {}): Knex.QueryBuilder<any, Post[]> {
-        const {tags, sort, user_id, page, timestamp} = options;
+    getPostsQuery(options: GetPostOptions = {}): Knex.QueryBuilder<any, Post[]> {
+        const {tags, sort, user_id, page, timestamp, search} = options;
         const query = this.knex('v_post AS post')
             .select("post.*", this.knex.raw('COUNT(*) OVER() AS posts_count'));
         //if tags provided, ensure that intersection count of tags and post tags equals to tags count
@@ -184,11 +184,24 @@ export class PostService {
         if(timestamp){
             query.where("post.created_at", "<", this.knex.raw(`to_timestamp(?)`, [timestamp]));
         }
+        if(search){
+
+            query.whereRaw(
+                `(EXISTS
+                        (SELECT el->'content' FROM jsonb_array_elements(post.content) AS el
+                        WHERE el->>'type' = 'text'
+                        AND el->>'content' LIKE :search)
+                     OR post.title LIKE :search)`,
+                {
+                    search: `%${search.split(" ").join("%")}%`
+                });
+        }
         return query;
     }
 }
 
-type PostQueryOptions = {
+type GetPostOptions = {
+    search?: string,
     tags?: string[],
     sort?: string,
     user_id?: number,
