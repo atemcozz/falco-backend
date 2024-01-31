@@ -18,23 +18,10 @@ export class JwtAuthGuard implements CanActivate {
       const authHeader = req.headers.authorization;
       const bearer = authHeader?.split(' ')[0];
       const token = authHeader?.split(' ')[1];
-      //DEV
-      if (process.env.NODE_ENV === 'development' && token === process.env.DEV_JWT_TOKEN) {
-        req['user'] = {
-          id: 0,
-          nickname: 'admin',
-        };
-
-        return true;
-      }
-      if (bearer !== 'Bearer' || !token) {
-        throw new UnauthorizedException();
-      }
+      if (bearer !== 'Bearer' || !token) throw new UnauthorizedException();
       const user = this.jwtService.verify(token);
       const banned = await this.userService.getUserBanState(user.id);
-      if(banned){
-        throw new ForbiddenException({message: "User banned"});
-      }
+      if(banned) throw new ForbiddenException({ message: "User banned" });
       req['user'] = user;
       return true;
     } catch (error) {

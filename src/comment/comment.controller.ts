@@ -11,11 +11,11 @@ import {
   UseInterceptors
 } from '@nestjs/common';
 import {ParseIntPipe} from "@nestjs/common/pipes";
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard.ts.guard';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import {CreateCommentDto} from "./dto/create-comment.dto";
 import {Req} from "@nestjs/common/decorators/http/route-params.decorator";
 import {CommentService} from "./comment.service";
-import {UserJwtRequest} from "../user/user-jwt-request";
+import {UserJwtRequestType} from "../user/model/user-jwt-request.type";
 import {UserInterceptor} from "../user/user.interceptor";
 @Controller('comment')
 export class CommentController {
@@ -28,18 +28,18 @@ export class CommentController {
   }
   @Get('post/:id')
   @UseInterceptors(UserInterceptor)
-  getCommentsByPost(@Param("id", ParseIntPipe) post_id: number,  @Req() req: UserJwtRequest) {
+  getCommentsByPost(@Param("id", ParseIntPipe) post_id: number,  @Req() req: UserJwtRequestType) {
     return this.commentService.getCommentsByPost(post_id,  req?.user?.id);
   }
 
   @Get('/id/:id')
   @UseInterceptors(UserInterceptor)
-  getCommentByID(@Param("id", ParseIntPipe) id: number,  @Req() req: UserJwtRequest) {
+  getCommentByID(@Param("id", ParseIntPipe) id: number,  @Req() req: UserJwtRequestType) {
     return this.commentService.getCommentByID(id, req?.user?.id);
   }
   @Put('like/:id')
   @UseGuards(JwtAuthGuard)
-  likeComment(@Param('id', ParseIntPipe) comment_id, @Req() req: UserJwtRequest): Promise<void>  {
+  likeComment(@Param('id', ParseIntPipe) comment_id, @Req() req: UserJwtRequestType): Promise<void>  {
     if(!comment_id) throw new NotFoundException();
     return this.commentService.likeComment(comment_id, req.user.id);
   }

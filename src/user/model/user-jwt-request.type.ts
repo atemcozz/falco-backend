@@ -1,6 +1,6 @@
 import { Request } from 'express';
 
-export interface UserJwtRequest extends Request {
+export interface UserJwtRequestType extends Request {
   user?: {
     id: number;
     nickname: string;

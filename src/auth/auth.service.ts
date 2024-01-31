@@ -19,6 +19,7 @@ import * as userQueryHelpers from "../user/helpers/user-query-helpers"
 import {v4 as uuidv4} from "uuid";
 import {RequestPasswordRecoverDto} from "./dto/request-password-recover.dto";
 import {ConfirmPasswordRecoverDto} from "./dto/confirm-password-recover.dto";
+import { TokenUser } from "./model/token-user.type";
 @Injectable()
 export class AuthService {
   constructor(
@@ -94,7 +95,7 @@ export class AuthService {
     return { user, accessToken, refreshToken };
   }
 
-  async logout(dto: LogoutDto) {
+  async logout(dto: LogoutDto): Promise<void> {
     const { refreshToken } = dto;
     if (!refreshToken) {
       throw new BadRequestException();
@@ -114,13 +115,6 @@ export class AuthService {
 
     if (!user) {
       throw new NotFoundException({ message: 'User not found' });
-    }
-    const banned = await this.knex("person_ban")
-        .where({user_id: user.id})
-        .andWhereRaw("NOW() < expires_at")
-        .first();
-    if(banned){
-      throw new ForbiddenException({message: "User banned"});
     }
     const newTokens = this.generateJWT({
       id: tokenUser.id,
@@ -168,7 +162,7 @@ export class AuthService {
     await this.knex("password_reset").del().where({user_id: record.user_id})
     await this.removeAllRefreshTokens(record.user_id);
   }
-  generateJWT(payload: any): { accessToken: string; refreshToken: string } {
+  generateJWT(payload: object): { accessToken: string; refreshToken: string } {
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '24h',
     });
@@ -177,33 +171,20 @@ export class AuthService {
     });
     return { accessToken, refreshToken };
   }
-  async saveRefreshToken(user_id, token): Promise<void> {
+  async saveRefreshToken(user_id: number, token: string): Promise<void> {
     await this.knex('token').insert({ user_id, refresh_token: token });
   }
-  async removeRefreshToken(token): Promise<void> {
+  async removeRefreshToken(token: string): Promise<void> {
     await this.knex('token').del().where({ refresh_token: token });
   }
-  async removeAllRefreshTokens(user_id): Promise<void> {
+  async removeAllRefreshTokens(user_id: number): Promise<void> {
     await this.knex('token').del().where({ user_id });
   }
-  validateToken(token) {
+  validateToken(token: string): TokenUser {
     try {
-      const userData = this.jwtService.verify(token);
-      return userData;
+      return this.jwtService.verify(token)
     } catch (e) {
       throw new UnauthorizedException({ message: 'Token not found' });
     }
-  }
-  sendPasswordRecoveryMail(receiver, password) {
-    this.mailerService.sendMail({
-      from: process.env.SMTP_USER,
-      to: receiver,
-      subject: '[Falco] Восстановление пароля',
-      text: '',
-      template: 'password-recovery',
-      context: {
-        password: password,
-      },
-    });
   }
 }

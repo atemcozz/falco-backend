@@ -5,12 +5,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { JwtService } from '@nestjs/jwt/dist';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './jwt-auth.guard.ts.guard';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Module({
   imports: [
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'SECRET',
+      secret: process.env["JWT_SECRET"] || 'SECRET',
       signOptions: {
         expiresIn: '24h',
       },

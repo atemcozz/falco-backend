@@ -5,7 +5,6 @@ import { AuthService } from 'src/auth/auth.service';
 import { GetUserDto } from './dto/get-user.dto';
 import { UpdateProfileDto } from './dto/update-profile-dto';
 import * as bcrypt from 'bcrypt';
-import { mutateObjectAsync } from 'src/utils/mutate-object';
 import {ForbiddenException} from "@nestjs/common/exceptions";
 import {RequestEmailUpdateDto} from "./dto/request-email-update-dto";
 import {v4 as uuidv4} from "uuid";
@@ -14,6 +13,8 @@ import * as path from "path";
 import {UpdatePasswordDto} from "./dto/update-password-dto";
 import * as userQueryHelpers from "./helpers/user-query-helpers";
 import {NotificationService} from "./notification.service";
+import {roleHasPermission} from "./helpers/roles-helper";
+import {RoleKeyType} from "./model/roles.type";
 @Injectable()
 export class UserService {
   constructor(@InjectConnection() private readonly knex: Knex,
@@ -80,7 +81,8 @@ export class UserService {
     if(dto.nickname){
       const candidate = await this.knex('person').where({ nickname: dto.nickname }).first();
       if(candidate && candidate.id !== user_id){
-        throw new ConflictException({ message: 'Пользователь с таким никнеймом уже существует' });
+        throw new ConflictException(
+          { message: 'Пользователь с таким никнеймом уже существует' });
       }
     }
     const user_set = await this.knex("person").update(dto).where({ id: user_id })
@@ -153,6 +155,14 @@ export class UserService {
       await this.notificationService.sendSubscribeNotification(subject_id, object_id);
     }
 
+  }
+  async banUser(user_id: number, sender_role: RoleKeyType, options: {message?: string, expires_at: string})
+  {
+    const {message, expires_at} = options;
+    const candidate = await this.knex("person").where({id: user_id}).first();
+    if(!candidate) throw new NotFoundException();
+    if(!roleHasPermission(sender_role, `user:ban:${candidate.role}`)) throw new ForbiddenException();
+    return this.knex("person_ban").insert({user_id,message, expires_at});
   }
   async getUserBanState(id: number){
     return this.knex("person_ban")

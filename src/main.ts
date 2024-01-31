@@ -1,7 +1,8 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { AppModule} from './app.module';
 
+const PORT = process.env.PORT || 4000;
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
@@ -11,8 +12,6 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
-  const PORT = process.env.PORT || 4000;
   await app.listen(PORT);
-  console.log(`Running on port ${PORT}`);
 }
-bootstrap();
+bootstrap().then(_ => console.log(`Running on port ${PORT}`));

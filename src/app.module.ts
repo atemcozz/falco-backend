@@ -5,7 +5,6 @@ import { AppService } from './app.service';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { PostModule } from './post/post.module';
-import { ProfileModule } from './profile/profile.module';
 import { CommentModule } from './comment/comment.module';
 import { KnexModule } from 'nestjs-knex';
 import { MailerModule } from '@nestjs-modules/mailer';
@@ -20,11 +19,11 @@ import * as path from "path";
       config: {
         client: 'pg',
         connection: {
-          host: process.env.DATABASE_HOST,
-          port: Number(process.env.DATABASE_PORT),
-          user: process.env.DATABASE_USER,
-          password: process.env.DATABASE_PASSWORD,
-          database: process.env.DATABASE_NAME,
+          host: process.env["DATABASE_HOST"],
+          port: Number(process.env["DATABASE_PORT"]),
+          user: process.env["DATABASE_USER"],
+          password: process.env["DATABASE_PASSWORD"],
+          database: process.env["DATABASE_NAME"],
         },
       },
     }),
@@ -46,10 +45,10 @@ import * as path from "path";
     UserModule,
     AuthModule,
     PostModule,
-    ProfileModule,
     CommentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
+  exports: [],
 })
 export class AppModule {}
